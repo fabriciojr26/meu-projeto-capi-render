@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finalizando Compra...</title>
-  <!-- Adicionado 'defer' para garantir que o script só executa após o HTML ser analisado -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
@@ -61,13 +60,13 @@
   </div>
 
   <script>
-    // Espera que todo o conteúdo da página, incluindo scripts externos, esteja pronto
     document.addEventListener('DOMContentLoaded', function() {
       
       console.log("Página carregada. A iniciar processo de compra...");
 
       const BACKEND_API_URL = "https://meu-servidor-capi.onrender.com/api/enviar-evento"; 
-      const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559193851891&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
+      // --- NÚMERO DE WHATSAPP CORRIGIDO AQUI ---
+      const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559180954206&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
 
       async function processPurchase() {
         console.log("A obter parâmetros do URL...");
@@ -119,23 +118,21 @@
         try {
           console.log("A enviar evento para o backend...", requestBody);
           
-          // *** INÍCIO DA CORREÇÃO COM TIMEOUT ***
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
 
           const response = await fetch(BACKEND_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(requestBody),
-            signal: controller.signal // Associa o controlador ao fetch
+            signal: controller.signal
           });
 
-          clearTimeout(timeoutId); // Limpa o timeout se o fetch for bem-sucedido
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             throw new Error(`O servidor respondeu com o estado: ${response.status}`);
           }
-          // *** FIM DA CORREÇÃO COM TIMEOUT ***
 
           console.log("Evento de compra enviado com sucesso!");
         } catch (error) {
