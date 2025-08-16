@@ -1,0 +1,14 @@
+{
+  "name": "capi-render-server",
+  "version": "1.0.0",
+  "description": "Servidor para enviar eventos da CAPI para a Meta via Render.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7"
+  }
+}

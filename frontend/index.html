@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finalizando Compra...</title>
+  <!-- Importação da biblioteca para fazer o hash SHA-256 no navegador -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6;
+      color: #111827;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 1rem;
+    }
+    .container {
+      padding: 2rem;
+      background-color: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      max-width: 400px;
+      width: 100%;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    p {
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="spinner"></div>
+    <h2>Estamos a redirecioná-lo para o suporte</h2>
+    <p>Por favor, aguarde um momento.</p>
+  </div>
+
+  <script>
+    // --- PASSO 1: CONFIGURAÇÃO ---
+    // IMPORTANTE: Esta URL será atualizada no Passo 4 do guia com a URL do seu servidor no Render.
+    const BACKEND_API_URL = "COLE_A_URL_DO_SEU_BACKEND_AQUI/api/enviar-evento"; 
+    // Substitua pelo link do WhatsApp do seu suporte
+    const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559193851891&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
+
+    // --- PASSO 2: CAPTURA E PREPARAÇÃO DOS DADOS ---
+    async function processPurchase() {
+      const params = new URLSearchParams(window.location.search);
+      
+      let email = params.get('email');
+      let phone = params.get('telefone');
+      let value = params.get('valor');
+      const currency = params.get('moeda') || 'BRL';
+
+      // *** CORREÇÃO APLICADA AQUI ***
+      // Se os parâmetros não existirem na URL (ex: durante um teste), usamos valores de exemplo.
+      if (!email || !value) {
+        console.warn("AVISO: Parâmetros 'email' ou 'valor' não encontrados na URL. A utilizar dados de teste.");
+        email = "teste.compra@email.com";
+        phone = "5511999998888";
+        value = "199.99";
+      }
+
+      const getCookie = (name) => {
+        const v = `; ${document.cookie}`;
+        const parts = v.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+        return null;
+      };
+
+      const emailHash = CryptoJS.SHA256(email.trim().toLowerCase()).toString();
+      const phoneHash = phone ? CryptoJS.SHA256(phone.replace(/[^\d]/g, '')).toString() : null;
+
+      const requestBody = {
+        event_name: "Purchase",
+        event_id: `evt-purchase-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+        source_url: window.location.href,
+        user_data: {
+          em: emailHash,
+          ph: phoneHash,
+          fbp: getCookie('_fbp'),
+          fbc: getCookie('_fbc')
+        },
+        custom_data: {
+          value: value,
+          currency: currency
+        }
+      };
+
+      // --- PASSO 3: ENVIO DO EVENTO PARA O BACKEND ---
+      try {
+        // Não envia o evento se a URL do backend não for alterada
+        if (!BACKEND_API_URL.includes("COLE_A_URL_DO_SEU_BACKEND_AQUI")) {
+            await fetch(BACKEND_API_URL, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestBody)
+            });
+            console.log("Evento de compra enviado com sucesso!");
+        } else {
+            console.warn("URL do backend não configurada. O envio do evento foi ignorado.");
+        }
+      } catch (error) {
+        console.error("Falha ao enviar o evento de compra:", error);
+      } finally {
+        redirectToWhatsApp();
+      }
+    }
+
+    function redirectToWhatsApp() {
+      setTimeout(() => {
+        window.location.href = WHATSAPP_SUPPORT_URL;
+      }, 2000);
+    }
+
+    window.onload = processPurchase;
+  </script>
+
+</body>
+</html>
