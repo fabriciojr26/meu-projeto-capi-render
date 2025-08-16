@@ -1,9 +1,8 @@
 /*
- * NOME DO ARQUIVO: server.js
+ * NOME DO FICHEIRO: server.js
  * DESCRIÇÃO:
- * Este é um servidor web simples usando Express.js, projetado para rodar no Render.
- * Ele cria um endpoint que recebe os dados da sua página intermediária e os envia
- * para a API de Conversões da Meta.
+ * Versão corrigida do servidor com a configuração de CORS para permitir
+ * pedidos do seu site frontend.
  */
 
 const express = require('express');
@@ -11,19 +10,28 @@ const fetch = require('node-fetch');
 const cors = require('cors'); // Importa o pacote CORS
 
 const app = express();
-const PORT = process.env.PORT || 10000; // O Render define a porta automaticamente
+const PORT = process.env.PORT || 10000;
 
-// Middlewares
-app.use(cors()); // Habilita o CORS para permitir requisições do seu frontend
-app.use(express.json()); // Habilita o parsing de JSON no corpo da requisição
+// --- INÍCIO DA CORREÇÃO DE CORS ---
+
+// URL do seu site frontend no Render
+const frontendURL = 'https://minha-pagina-intermediaria.onrender.com';
+
+const corsOptions = {
+  origin: frontendURL
+};
+
+app.use(cors(corsOptions)); // Habilita o CORS apenas para o seu frontend
+
+// --- FIM DA CORREÇÃO DE CORS ---
+
+app.use(express.json());
 
 // Endpoint para receber o evento da CAPI
 app.post('/api/enviar-evento', async (req, res) => {
-  // Pega as credenciais das variáveis de ambiente (método seguro)
   const PIXEL_ID = process.env.META_PIXEL_ID;
   const ACCESS_TOKEN = process.env.META_ACCESS_TOKEN;
 
-  // Validação de segurança
   if (!PIXEL_ID || !ACCESS_TOKEN) {
     console.error("Credenciais da API da Meta não configuradas no servidor.");
     return res.status(500).json({ error: 'Configuração interna do servidor incompleta.' });
@@ -31,7 +39,6 @@ app.post('/api/enviar-evento', async (req, res) => {
 
   try {
     const body = req.body;
-
     const payload = {
       event_name: body.event_name,
       event_time: Math.floor(Date.now() / 1000),
@@ -64,7 +71,6 @@ app.post('/api/enviar-evento', async (req, res) => {
   }
 });
 
-// Inicia o servidor
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`Servidor a rodar na porta ${PORT}`);
 });
