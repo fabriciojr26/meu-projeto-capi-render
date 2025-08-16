@@ -1,7 +1,7 @@
 /*
  * NOME DO FICHEIRO: server.js
  * DESCRIÇÃO:
- * Versão de diagnóstico para identificar o URL de origem exato e resolver o problema de CORS.
+ * Versão final de produção do servidor da CAPI.
  */
 
 const express = require('express');
@@ -11,19 +11,10 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- INÍCIO DO CÓDIGO DE DIAGNÓSTICO ---
-
-// Temporariamente, vamos permitir todos os URLs para teste
+// Habilita o CORS para permitir pedidos do seu frontend
 app.use(cors());
 
-// Middleware para nos dizer qual é o URL de origem de cada pedido
-app.use((req, res, next) => {
-  console.log(`Pedido recebido de: ${req.headers.origin}`);
-  next();
-});
-
-// --- FIM DO CÓDIGO DE DIAGNÓSTICO ---
-
+// Habilita o parsing de JSON no corpo da requisição
 app.use(express.json());
 
 // Endpoint para receber o evento da CAPI
