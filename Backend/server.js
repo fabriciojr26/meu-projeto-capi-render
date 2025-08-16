@@ -1,29 +1,39 @@
 /*
  * NOME DO FICHEIRO: server.js
  * DESCRIÇÃO:
- * Versão corrigida do servidor com a configuração de CORS para permitir
- * pedidos do seu site frontend.
+ * Versão final corrigida com uma configuração de CORS mais robusta
+ * para garantir a comunicação entre o frontend e o backend.
  */
 
 const express = require('express');
 const fetch = require('node-fetch');
-const cors = require('cors'); // Importa o pacote CORS
+const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// --- INÍCIO DA CORREÇÃO DE CORS ---
+// --- INÍCIO DA CORREÇÃO DE CORS ROBUSTA ---
 
-// URL do seu site frontend no Render
-const frontendURL = 'https://minha-pagina-intermediaria.onrender.com';
+// Lista de URLs permitidos. Adicione outros se necessário no futuro.
+const allowedOrigins = [
+  'https://minha-pagina-intermediaria.onrender.com'
+  // Pode adicionar 'http://localhost:3000' aqui se for testar localmente
+];
 
 const corsOptions = {
-  origin: frontendURL
+  origin: function (origin, callback) {
+    // Permite pedidos sem 'origin' (como apps mobile ou Postman) ou se o 'origin' estiver na lista
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Não permitido pela política de CORS'));
+    }
+  }
 };
 
-app.use(cors(corsOptions)); // Habilita o CORS apenas para o seu frontend
+app.use(cors(corsOptions));
 
-// --- FIM DA CORREÇÃO DE CORS ---
+// --- FIM DA CORREÇÃO DE CORS ROBUSTA ---
 
 app.use(express.json());
 
@@ -39,6 +49,7 @@ app.post('/api/enviar-evento', async (req, res) => {
 
   try {
     const body = req.body;
+    // ... (resto do código permanece igual)
     const payload = {
       event_name: body.event_name,
       event_time: Math.floor(Date.now() / 1000),
