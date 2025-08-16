@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Finalizando Compra...</title>
-  <!-- Importação da biblioteca para fazer o hash SHA-256 no navegador -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <!-- Adicionado 'defer' para garantir que o script só executa após o HTML ser analisado -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" defer></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     body {
@@ -61,83 +61,103 @@
   </div>
 
   <script>
-    // --- PASSO 1: CONFIGURAÇÃO ---
-    // IMPORTANTE: Esta URL será atualizada no Passo 4 do guia com a URL do seu servidor no Render.
-    const BACKEND_API_URL = ""https://meu-servidor-capi.onrender.com/api/enviar-evento""; 
-    // Substitua pelo link do WhatsApp do seu suporte
-    const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559180954206&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
-
-    // --- PASSO 2: CAPTURA E PREPARAÇÃO DOS DADOS ---
-    async function processPurchase() {
-      const params = new URLSearchParams(window.location.search);
+    // Espera que todo o conteúdo da página, incluindo scripts externos, esteja pronto
+    document.addEventListener('DOMContentLoaded', function() {
       
-      let email = params.get('email');
-      let phone = params.get('telefone');
-      let value = params.get('valor');
-      const currency = params.get('moeda') || 'BRL';
+      console.log("Página carregada. A iniciar processo de compra...");
 
-      // *** CORREÇÃO APLICADA AQUI ***
-      // Se os parâmetros não existirem na URL (ex: durante um teste), usamos valores de exemplo.
-      if (!email || !value) {
-        console.warn("AVISO: Parâmetros 'email' ou 'valor' não encontrados na URL. A utilizar dados de teste.");
-        email = "teste.compra@email.com";
-        phone = "5511999998888";
-        value = "199.99";
+      const BACKEND_API_URL = "https://meu-servidor-capi.onrender.com/api/enviar-evento"; 
+      const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559193851891&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
+
+      async function processPurchase() {
+        console.log("A obter parâmetros do URL...");
+        const params = new URLSearchParams(window.location.search);
+        
+        let email = params.get('email');
+        let phone = params.get('telefone');
+        let value = params.get('valor');
+        const currency = params.get('moeda') || 'BRL';
+
+        if (!email || !value) {
+          console.warn("AVISO: Parâmetros 'email' ou 'valor' não encontrados. A utilizar dados de teste.");
+          email = "teste.compra.final@email.com";
+          phone = "5511999998888";
+          value = "149.99";
+        }
+        console.log(`Dados obtidos: Email=${email}, Valor=${value}`);
+
+        const getCookie = (name) => {
+          const v = `; ${document.cookie}`;
+          const parts = v.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop().split(';').shift();
+          return null;
+        };
+
+        let emailHash, phoneHash;
+        try {
+          console.log("A gerar hashes dos dados...");
+          if (typeof CryptoJS === 'undefined') {
+            throw new Error("A biblioteca CryptoJS não foi carregada.");
+          }
+          emailHash = CryptoJS.SHA256(email.trim().toLowerCase()).toString();
+          phoneHash = phone ? CryptoJS.SHA256(phone.replace(/[^\d]/g, '')).toString() : null;
+          console.log("Hashes gerados com sucesso.");
+        } catch (error) {
+          console.error("ERRO CRÍTICO ao gerar hashes:", error);
+          redirectToWhatsApp();
+          return;
+        }
+
+        const requestBody = {
+          event_name: "Purchase",
+          event_id: `evt-purchase-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+          source_url: window.location.href,
+          user_data: { em: emailHash, ph: phoneHash, fbp: getCookie('_fbp'), fbc: getCookie('_fbc') },
+          custom_data: { value: value, currency: currency }
+        };
+
+        try {
+          console.log("A enviar evento para o backend...", requestBody);
+          
+          // *** INÍCIO DA CORREÇÃO COM TIMEOUT ***
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos de timeout
+
+          const response = await fetch(BACKEND_API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal // Associa o controlador ao fetch
+          });
+
+          clearTimeout(timeoutId); // Limpa o timeout se o fetch for bem-sucedido
+
+          if (!response.ok) {
+            throw new Error(`O servidor respondeu com o estado: ${response.status}`);
+          }
+          // *** FIM DA CORREÇÃO COM TIMEOUT ***
+
+          console.log("Evento de compra enviado com sucesso!");
+        } catch (error) {
+          if (error.name === 'AbortError') {
+            console.error("Falha ao enviar o evento: O pedido excedeu o tempo limite (timeout).");
+          } else {
+            console.error("Falha ao enviar o evento de compra:", error);
+          }
+        } finally {
+          console.log("A redirecionar para o WhatsApp...");
+          redirectToWhatsApp();
+        }
       }
 
-      const getCookie = (name) => {
-        const v = `; ${document.cookie}`;
-        const parts = v.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop().split(';').shift();
-        return null;
-      };
-
-      const emailHash = CryptoJS.SHA256(email.trim().toLowerCase()).toString();
-      const phoneHash = phone ? CryptoJS.SHA256(phone.replace(/[^\d]/g, '')).toString() : null;
-
-      const requestBody = {
-        event_name: "Purchase",
-        event_id: `evt-purchase-${Date.now()}-${Math.random().toString(36).substring(2)}`,
-        source_url: window.location.href,
-        user_data: {
-          em: emailHash,
-          ph: phoneHash,
-          fbp: getCookie('_fbp'),
-          fbc: getCookie('_fbc')
-        },
-        custom_data: {
-          value: value,
-          currency: currency
-        }
-      };
-
-      // --- PASSO 3: ENVIO DO EVENTO PARA O BACKEND ---
-      try {
-        // Não envia o evento se a URL do backend não for alterada
-        if (!BACKEND_API_URL.includes("COLE_A_URL_DO_SEU_BACKEND_AQUI")) {
-            await fetch(BACKEND_API_URL, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(requestBody)
-            });
-            console.log("Evento de compra enviado com sucesso!");
-        } else {
-            console.warn("URL do backend não configurada. O envio do evento foi ignorado.");
-        }
-      } catch (error) {
-        console.error("Falha ao enviar o evento de compra:", error);
-      } finally {
-        redirectToWhatsApp();
+      function redirectToWhatsApp() {
+        setTimeout(() => {
+          window.location.href = WHATSAPP_SUPPORT_URL;
+        }, 2000);
       }
-    }
 
-    function redirectToWhatsApp() {
-      setTimeout(() => {
-        window.location.href = WHATSAPP_SUPPORT_URL;
-      }, 2000);
-    }
-
-    window.onload = processPurchase;
+      processPurchase();
+    });
   </script>
 
 </body>
