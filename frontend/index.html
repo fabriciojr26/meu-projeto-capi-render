@@ -62,28 +62,24 @@
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       
-      console.log("Página carregada. A iniciar processo de compra...");
-
       const BACKEND_API_URL = "https://meu-servidor-capi.onrender.com/api/enviar-evento"; 
-      // --- NÚMERO DE WHATSAPP CORRIGIDO AQUI ---
       const WHATSAPP_SUPPORT_URL = "https://api.whatsapp.com/send?phone=559180954206&text=Ol%C3%A1%2C+segue+meu+comprovante+do+plano+RD+Play";
 
       async function processPurchase() {
-        console.log("A obter parâmetros do URL...");
         const params = new URLSearchParams(window.location.search);
         
-        let email = params.get('email');
-        let phone = params.get('telefone');
-        let value = params.get('valor');
+        const email = params.get('email');
+        const phone = params.get('telefone');
+        const value = params.get('valor');
         const currency = params.get('moeda') || 'BRL';
 
+        // --- ALTERAÇÃO IMPORTANTE AQUI ---
+        // Agora, o script só continua se o email e o valor forem encontrados no URL.
         if (!email || !value) {
-          console.warn("AVISO: Parâmetros 'email' ou 'valor' não encontrados. A utilizar dados de teste.");
-          email = "teste.compra.final@email.com";
-          phone = "5511999998888";
-          value = "149.99";
+          console.log("Dados de compra não encontrados no URL. A redirecionar diretamente.");
+          redirectToWhatsApp();
+          return; // Para a execução aqui
         }
-        console.log(`Dados obtidos: Email=${email}, Valor=${value}`);
 
         const getCookie = (name) => {
           const v = `; ${document.cookie}`;
@@ -94,13 +90,11 @@
 
         let emailHash, phoneHash;
         try {
-          console.log("A gerar hashes dos dados...");
           if (typeof CryptoJS === 'undefined') {
             throw new Error("A biblioteca CryptoJS não foi carregada.");
           }
           emailHash = CryptoJS.SHA256(email.trim().toLowerCase()).toString();
           phoneHash = phone ? CryptoJS.SHA256(phone.replace(/[^\d]/g, '')).toString() : null;
-          console.log("Hashes gerados com sucesso.");
         } catch (error) {
           console.error("ERRO CRÍTICO ao gerar hashes:", error);
           redirectToWhatsApp();
@@ -116,8 +110,6 @@
         };
 
         try {
-          console.log("A enviar evento para o backend...", requestBody);
-          
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -136,13 +128,8 @@
 
           console.log("Evento de compra enviado com sucesso!");
         } catch (error) {
-          if (error.name === 'AbortError') {
-            console.error("Falha ao enviar o evento: O pedido excedeu o tempo limite (timeout).");
-          } else {
-            console.error("Falha ao enviar o evento de compra:", error);
-          }
+          console.error("Falha ao enviar o evento de compra:", error);
         } finally {
-          console.log("A redirecionar para o WhatsApp...");
           redirectToWhatsApp();
         }
       }
